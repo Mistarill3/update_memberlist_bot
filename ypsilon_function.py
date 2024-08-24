@@ -1,14 +1,12 @@
 import os
 import json
-import urllib.request
 import datetime
 
 import s3FileOperation
 import sendHttpRequest
 
-token = os.environ["TELEGRAM_BOT_TOKEN"] 
+token = os.environ["TELEGRAM_BOT_TOKEN"]
 chatId1 = os.environ["TELEGRAM_CHAT_ID"]
-#chatId1 = os.environ["TELEGRAM_CHAT_ID_FOR_TEST"]
 chatId2 = os.environ["TELEGRAM_CHAT_ID_FOR_ERRORMESSAGE"]
 
 
@@ -20,9 +18,12 @@ def ypsilon_handler(event, context, token):
     resBody_json = sendHttpRequest.getChat(token, chatId)
     if "title" in resBody_json["result"]:
         title = resBody_json["result"]["title"]
-
     
-    fileName = "XXX.json"
+    resBody_json = sendHttpRequest.getChatMemberCount(token, chatId)
+    chatMemberCount = resBody_json["result"]
+    print("chatMemberCount == "+str(chatMemberCount))
+    
+    fileName = "XFFSRheinNeckar-memberlist/XFFSRheinNeckar-memberlist.json"
     memberList = s3FileOperation.downloadAndReadFile(fileName)
     print("==memberListDownloaded")
     print(type(memberList))
@@ -34,6 +35,12 @@ def ypsilon_handler(event, context, token):
     numberOfMember = len(memberList_dict)
     print("==numberOfMember: "+str(numberOfMember))
     print(type(numberOfMember))
+    
+    messageText = "chatMemberCount: "+str(chatMemberCount)+"人、numberOfMember: "+str(numberOfMember)+"人"
+    chatId = chatId2
+    messageThreadId = None
+    sendHttpRequest.sendMessage(token, chatId, messageThreadId, messageText)
+    chatId = chatId1
     
     fileName = "empty.json"
     memberList2 = s3FileOperation.downloadAndReadFile(fileName)
@@ -55,7 +62,8 @@ def ypsilon_handler(event, context, token):
         if resBody_json["ok"] == False:
             messageText = "user ID: " + str(userId) +  " not found in " + title + " (group ID: " + str(chatId) + ")."
             chatId = chatId2
-            sendHttpRequest.sendMessage(token, chatId, messageText)
+            messageThreadId = None
+            sendHttpRequest.sendMessage(token, chatId, messageThreadId, messageText)
             chatId = chatId1
             
             userName = ""
@@ -68,7 +76,7 @@ def ypsilon_handler(event, context, token):
                 userName = resBody_json["result"]["user"]["username"]
             else:
                 userName = ""
-            if "first_name" in resBody_json["result"]["user"]:   
+            if "first_name" in resBody_json["result"]["user"]:
                 firstName = resBody_json["result"]["user"]["first_name"]
             else:
                 firstName = ""
@@ -90,14 +98,14 @@ def ypsilon_handler(event, context, token):
         print("==appendUserInfo")
         print(json.dumps(memberList2_dict))
         
-        dateNow = datetime.datetime.now()
-        dateNowJST = dateNow + datetime.timedelta(hours=+9)
-        timestamp = dateNowJST.strftime("%Y%m%d%H%M")
-        
-        newFileContents = json.dumps(memberList2_dict, ensure_ascii=False, indent=4)
-        print("==newFileContents")
-        fileName = "ACNH-memberlist/ACNH-memberlist"+timestamp+".json"
-        s3FileOperation.writeAndUploadFile(newFileContents, fileName)
+    dateNow = datetime.datetime.now()
+    dateNowJST = dateNow + datetime.timedelta(hours=+9)
+    timestamp = dateNowJST.strftime("%Y%m%d%H%M")
+    
+    newFileContents = json.dumps(memberList2_dict, ensure_ascii=False, indent=4)
+    print("==newFileContents")
+    fileName = "XFFSRheinNeckar-memberlist/XFFSRheinNeckar-memberlist"+timestamp+".json"
+    s3FileOperation.writeAndUploadFile(newFileContents, fileName)
 
 
     print("==endYpsilon_handler")
